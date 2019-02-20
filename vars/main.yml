@@ -1,0 +1,5 @@
+---
+# vars file for hpna-snapshot
+HPNA_USER: 
+HPNA_PASS: 
+HPNA_API_URL:  

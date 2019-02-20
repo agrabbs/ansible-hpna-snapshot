@@ -1,0 +1,18 @@
+#
+# Title:        HPNA Snapshot Role 
+# Author:       Andrew Grabbs
+# Email:        Andrew@AndrewGrabbs.com
+#
+---
+# Main file hpna-snapshot
+- name: "HPNA Snapshot: Authentication"
+
+  import_tasks: "tasks/authenticate.yml"
+  run_once: true
+  when:
+    - "SESSION_ID is undefined"
+  delegate_to: localhost
+
+- name: "HPNA Snapshot: Create/Valid Snapshot"
+  import_tasks: "tasks/create_snapshot.yml"
+  delegate_to: localhost

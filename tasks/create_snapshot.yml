@@ -1,0 +1,69 @@
+#
+# Title:        HPNA Snapshot Role 
+# Author:       Andrew Grabbs
+# Email:        Andrew@AndrewGrabbs.com
+#
+---
+# Create & Validate HPNA Snapshot 
+- name: "Creating Snapshot Request"
+  uri:
+    url: "{{ HPNA_API_URL }}"
+    status_code: 200
+    method: POST
+    follow_redirects: all
+    return_content: yes
+    validate_certs: False
+    headers:
+      Content-Type: "text/xml;charset=UTF-8"
+    body: >
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://hp.com/nas/10/20">
+          <soapenv:Header/>
+          <soapenv:Body>
+            <ns:get_snapshot>
+              <parameters>
+                <ns:sessionid>{{SESSION_ID}}</ns:sessionid>
+                <ns:priority>1</ns:priority>
+                <ns:comment>Snapshot Requested by Ansible Playbook - HPNA Snapshot</ns:comment>
+                <ns:host>{{ inventory_hostname }}</ns:host>
+                <ns:start>now</ns:start>
+              </parameters>
+            </ns:get_snapshot>
+          </soapenv:Body>
+        </soapenv:Envelope>
+  register: result
+
+- name: "Saving HPNA Task ID"
+  set_fact:
+      hpna_task_id: "{{ (result['content'] | regex_findall('task (.*?) queue') | list)[0] }}"
+
+#- name: "Task ID"
+#  debug:
+#    msg:
+#    - "{{hpna_task_id}}"
+
+- name: "Waiting for HPNA Task {{hpna_task_id}} completeDate"
+  uri:
+    url: "{{ HPNA_API_URL }}"
+    status_code: 200
+    method: POST
+    follow_redirects: all
+    return_content: yes
+    validate_certs: False
+    headers:
+      Content-Type: "text/xml;charset=UTF-8"
+    body: >
+        <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://hp.com/nas/10/20">
+          <soapenv:Header/>
+          <soapenv:Body>
+            <ns:list_task>
+              <parameters>
+                <ns:sessionid>{{SESSION_ID}}</ns:sessionid>
+                <ns:id>{{hpna_task_id}}</ns:id>
+              </parameters>
+            </ns:list_task>
+          </soapenv:Body>
+        </soapenv:Envelope>
+  register: result
+  until: result.content.find('completeDate') != -1
+  retries: 60
+  delay: 20
